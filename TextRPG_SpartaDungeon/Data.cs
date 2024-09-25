@@ -554,7 +554,7 @@ namespace TextRPG_SpartaDungeon
     }
     class WorldItemPotion
     {
-        public ItemPotion itemPotion { get; set; }
+        public ItemPotion itemPotion { get; }
         public int num { get; set; }
         public WorldItemPotion(ItemPotion _itemPotion, int _num)
         {
@@ -564,11 +564,11 @@ namespace TextRPG_SpartaDungeon
     }
     class ItemPotion
     {
-        public string name { get; set; } //이름은 식별자의 역할을 하기 때문에 중복되면 안됨
-        public string information { get; set; }
-        public ITP type { get; set; }
-        public int power { get; set; }
-        public int value { get; set; }
+        public string name { get; } //이름은 식별자의 역할을 하기 때문에 중복되면 안됨
+        public string information { get; }
+        public ITP type { get; }
+        public int power { get; }
+        public int value { get; }
 
         public ItemPotion(string _name, string _information, ITP _type, int _power, int _value)
         {
