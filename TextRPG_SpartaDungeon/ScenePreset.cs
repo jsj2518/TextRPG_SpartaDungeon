@@ -112,8 +112,9 @@ namespace TextRPG_SpartaDungeon
             ConsoleKey[] keyFilter = new ConsoleKey[] { ConsoleKey.NoName };
             keyController.GetUserInput(keyFilter, out int cheat);
             StatusMenuUpdate(selectX, selectY, gameData, screenController);
-            //레벨업 치트 추가
+            //레벨업 치트, 체력 1 되는 추가
             keyController.SetCheat(1, "level up");
+            keyController.SetCheat(2, "harm self");
 
             ConsoleKey keyInput;
             int[] yMin = new int[3];
@@ -128,11 +129,16 @@ namespace TextRPG_SpartaDungeon
             while (true)
             {
                 keyInput = keyController.GetUserInput(keyFilter, out int cheatActivate);
-                //돈 치트 발동
+                //레벨업 치트 발동
                 if (cheatActivate == 1)
                 {
                     gameData.LevelUP();
                     gameData.PP_Exp = 0;
+                }
+                //체력 1 치트 발동
+                else if (cheatActivate == 2)
+                {
+                    gameData.PS_HPCur = 1;
                 }
 
                 switch (keyInput)
@@ -170,7 +176,14 @@ namespace TextRPG_SpartaDungeon
                                 keyController.ClearCheat();
                                 return;
                             }
-                            else if (selectY == 2) ; //여기 스킬
+                            else if (selectY == 2) //스킬
+                            {
+                                SB_Next = SB.Inventory;
+                                SE_Next = SE.Inventory_Skill;
+
+                                keyController.ClearCheat();
+                                return;
+                            }
                         }
                         else if (selectX == 1)
                         {
@@ -281,7 +294,7 @@ namespace TextRPG_SpartaDungeon
                         case 2:
                             screenController.Write(10, 30, 3, "-->");
                             screenController.Write(19, 3, 61, "힘 : 공격력을 증가시킵니다.");
-                            screenController.Write(20, 3, 61, "     장비 무게에 따른 스피드 감소를 줄입니다.");
+                            screenController.Write(20, 3, 61, "     장비 무게에 따른 스피드 감소를 방지합니다.");
                             screenController.Write(21, 3, 61, "     원거리 명중률을 감소시킵니다.");
                             break;
                         case 3:
@@ -629,13 +642,75 @@ namespace TextRPG_SpartaDungeon
                     topItem = 0;
                     selectY = 0;
 
-                    //여기 스킬 구현
+                    boolVal = true;
+                    while (boolVal)
+                    {
+                        selectItem = topItem + selectY;
+
+                        keyFilter = new ConsoleKey[] { ConsoleKey.UpArrow, ConsoleKey.DownArrow, ConsoleKey.X, ConsoleKey.Tab };
+                        keyInput = keyController.GetUserInput(keyFilter, out int cheatActivate);
+                        switch (keyInput)
+                        {
+                            case ConsoleKey.UpArrow:
+                                if (listCount == 0) break;
+                                if (selectItem == 0)
+                                {
+                                    if (listCount >= 10)
+                                    {
+                                        topItem = listCount - 10;
+                                        selectY = 9;
+                                    }
+                                    else
+                                    {
+                                        topItem = 0;
+                                        selectY = listCount - 1;
+                                    }
+                                }
+                                else
+                                {
+                                    if (selectY == 0)
+                                    {
+                                        topItem--;
+                                    }
+                                    else
+                                    {
+                                        selectY--;
+                                    }
+                                }
+                                break;
+                            case ConsoleKey.DownArrow:
+                                if (listCount == 0) break;
+                                if (selectItem == listCount - 1)
+                                {
+                                    topItem = 0;
+                                    selectY = 0;
+                                }
+                                else
+                                {
+                                    if (selectY == 9)
+                                    {
+                                        topItem++;
+                                    }
+                                    else
+                                    {
+                                        selectY++;
+                                    }
+                                }
+                                break;
+                            case ConsoleKey.X:
+                                return selectTab;
+                            case ConsoleKey.Tab:
+                                selectTab = 0;
+                                boolVal = false;
+                                break;
+                        }
+
+                        InventoryMenuUpdate(selectTab, topItem, selectY, gearSelect, gameData, screenController, keyController);
+                    }
                 }
 
                 InventoryMenuUpdate(selectTab, topItem, selectY, gearSelect, gameData, screenController, keyController);
             }
-
-            return selectTab;
         }
         private static void InventoryMenuUpdate(int selectTab, int topItem, int selectY, int gearSelect, GameData gameData, ScreenController screenController, KeyController keyController)
         {
@@ -661,7 +736,10 @@ namespace TextRPG_SpartaDungeon
                 for (int i = 0; i < potionList.Count; i++)
                 {
                     if ((potionList[i].itemPotion.type == ITP.HP || potionList[i].itemPotion.type == ITP.PP) && topItem + selectY == i)
+                    {
                         strNameList[i] = $"{potionList[i].itemPotion.name} X {potionList[i].num}  (Z : 사용)";
+                        screenController.Write(4, 55, 41, $"HP : {gameData.PS_HPCur} / {gameData.PS_HPMax}"); //현재 체력 표시
+                    }
                     else
                         strNameList[i] = $"{potionList[i].itemPotion.name} X {potionList[i].num}";
                 }
@@ -676,7 +754,7 @@ namespace TextRPG_SpartaDungeon
 
                 //아이템 리스트 그리기
                 for (int i = topItem; i < strNameList.Length && i < topItem + 10; i++)
-                    screenController.Write(5 + i * 2, 5, 24, strNameList[i]);
+                    screenController.Write(5 + i * 2, 5, 40, strNameList[i]);
                 screenController.Write(5 + selectY * 2, 1, 3, "-->");
 
                 //아이템 세부 보기
@@ -717,9 +795,9 @@ namespace TextRPG_SpartaDungeon
                 for (int i = 0; i < gearList.Count; i++)
                 {
                     if (gearList[i].equipped == true)
-                        strNameList[potionList.Count + i] = $"[E] {gearList[i].itemGear.name}";
+                        strNameList[i] = $"[E] {gearList[i].itemGear.name}";
                     else
-                        strNameList[potionList.Count + i] = gearList[i].itemGear.name;
+                        strNameList[i] = gearList[i].itemGear.name;
                 }
 
                 //보유 리스트 그리기
@@ -982,7 +1060,7 @@ namespace TextRPG_SpartaDungeon
             keyFilter = new ConsoleKey[] { ConsoleKey.UpArrow, ConsoleKey.DownArrow, ConsoleKey.LeftArrow, ConsoleKey.RightArrow, ConsoleKey.Z, ConsoleKey.X, ConsoleKey.Tab };
             while (true)
             {
-                listCount = (isBuy == true) ? gameData.gearShop.list.Count : gameData.inventoryPotion.Count;
+                listCount = (isBuy == true) ? gameData.potionShop.list.Count : gameData.inventoryPotion.Count;
                 selectItem = topItem + selectY;
 
                 keyInput = keyController.GetUserInput(keyFilter, out int cheatActivate);

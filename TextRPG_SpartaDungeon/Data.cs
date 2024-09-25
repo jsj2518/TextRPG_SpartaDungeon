@@ -58,14 +58,18 @@ namespace TextRPG_SpartaDungeon
 
         //인벤토리
         public List<WorldItemPotion> inventoryPotion = new List<WorldItemPotion>();
+        public Dictionary<string, int> dic_inventoryPotion { get; set; } //저장용 데이터
         //장비
         public List<WorldItemGear> inventoryGear = new List<WorldItemGear>();
+        public Dictionary<string, bool> dic_inventoryGear { get; set; } //저장용 데이터
         //착용 장비
         public ItemGear[] equippedGear = new ItemGear[(int)GST.MAX];
+        public Dictionary<string, int> dic_equippedGear { get; set; } //저장용 데이터
         //스킬
         public List<Skill> skills = new List<Skill>();
         //용병
         public Mercenary mercenary1, mercenary2;
+
 
 
         public void SetLevel1() //초기 스텟 설정
@@ -368,30 +372,14 @@ namespace TextRPG_SpartaDungeon
 
         //장비가게 정보
         public GearShop gearShop = new GearShop();
+        public Dictionary<string, int> dic_gearShop { get; set; } //저장용 데이터
         //소모품 가게 정보
         public PotionShop potionShop = new PotionShop();
 
 
 
 
-        public void SaveData(int saveNum)
-        {
-            if (saveNum < 1 || saveNum > 3)
-            {
-                return;
-            }
 
-            SaveToFile($"{Const.saveFileName}{saveNum}");
-        }
-        public static GameData LoadData(int saveNum)
-        {
-            if (saveNum < 1 || saveNum > 3)
-            {
-                return null;
-            }
-
-            return LoadFromFile($"{Const.saveFileName}{saveNum}");
-        }
         public static bool ExistsData(int saveNum)
         {
             if (saveNum < 1 || saveNum > 3)
@@ -402,9 +390,31 @@ namespace TextRPG_SpartaDungeon
             return File.Exists($"{Const.saveFileName}{saveNum}");
         }
 
+        public void SaveData(int saveNum)
+        {
+            if (saveNum < 1 || saveNum > 3)
+            {
+                return;
+            }
+
+            SaveToFile($"{Const.saveFileName}{saveNum}");
+        }
+
         // 데이터를 JSON 파일로 저장하는 메서드
         private void SaveToFile(string filePath)
         {
+            dic_inventoryPotion = new Dictionary<string, int>();
+            foreach (WorldItemPotion i in inventoryPotion) dic_inventoryPotion.Add(i.itemPotion.name, i.num);
+            dic_inventoryGear = new Dictionary<string, bool>();
+            foreach (WorldItemGear i in inventoryGear) dic_inventoryGear.Add(i.itemGear.name, i.equipped);
+            dic_equippedGear = new Dictionary<string, int>();
+            for (int i = 0; i < (int)GST.MAX; i++)
+            {
+                if (equippedGear[i] != null) dic_equippedGear.Add(equippedGear[i].name, i);
+            }
+            dic_gearShop = new Dictionary<string, int>();
+            foreach (ItemGear i in gearShop.list) dic_gearShop.Add(i.name, 0);
+
             try
             {
                 // 객체를 JSON으로 직렬화
@@ -422,38 +432,16 @@ namespace TextRPG_SpartaDungeon
             }
         }
 
-        // JSON 파일에서 데이터를 불러오는 메서드
-        private static GameData LoadFromFile(string filePath)
-        {
-            try
-            {
-                if (File.Exists(filePath))
-                {
-                    // JSON 파일을 읽어서 객체로 역직렬화
-                    string jsonString = File.ReadAllText(filePath);
-                    GameData playerData = JsonSerializer.Deserialize<GameData>(jsonString);
-                    Console.SetCursorPosition(0, Const.screenH + 10);
-                    Console.WriteLine("데이터가 성공적으로 불러와졌습니다.");
-                    Console.SetCursorPosition(0, 0);
-                    return playerData;
-                }
-                else
-                {
-                    Console.SetCursorPosition(0, Const.screenH + 10);
-                    Console.WriteLine("파일을 찾을 수 없습니다.");
-                    Console.SetCursorPosition(0, 0);
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.SetCursorPosition(0, Const.screenH + 10);
-                Console.WriteLine("데이터 불러오기 중 오류가 발생했습니다: " + ex.Message);
-                Console.SetCursorPosition(0, 0);
-                return null;
-            }
-        }
+        
     }
+
+
+
+
+
+
+
+
 
     //전역 변수
     class ConsoleData
@@ -471,7 +459,7 @@ namespace TextRPG_SpartaDungeon
             list = new List<ItemGear>();
             list.AddRange(new ItemGear[]
                 { ItemData.sword2, ItemData.shield2, ItemData.dagger2, ItemData.dagger2_s, ItemData.bow2, ItemData.arrow2,
-                  ItemData.helmetH2, ItemData.helmetL2, ItemData.armorH2, ItemData.helmetL2, ItemData.glovesH2, ItemData.glovesL2_s,ItemData.shoesH2_s,  ItemData.shoesL2});
+                  ItemData.helmetH2, ItemData.helmetL2, ItemData.armorH2, ItemData.armorL2, ItemData.glovesH2, ItemData.glovesL2_s,ItemData.shoesH2_s,  ItemData.shoesL2});
 
             //사용자 직업과 맞지 않는 무기 삭제
             if (Program.gameData.PP_Class == PC.Warrior)
@@ -497,21 +485,31 @@ namespace TextRPG_SpartaDungeon
         {
             list = new List<ItemPotion>();
             list.AddRange(new ItemPotion[]
-                { ItemData.hp1, ItemData.hp2, ItemData.hp3, ItemData.sp1, ItemData.sp2, ItemData.sp3, ItemData.pp });
+                { Program.globalItemData.hp1, Program.globalItemData.hp2, Program.globalItemData.hp3, Program.globalItemData.sp1, Program.globalItemData.sp2, Program.globalItemData.sp3, Program.globalItemData.pp });
         }
     }
 
     class ItemData
     {
-        public static ItemPotion hp1 { get; } = new ItemPotion("작은 체력 포션", "HP를 30 회복한다.", ITP.HP, 30, 100);
-        public static ItemPotion hp2 { get; } = new ItemPotion("체력 포션", "HP를 80 회복한다.", ITP.HP, 80, 300);
-        public static ItemPotion hp3 { get; } = new ItemPotion("고급 체력 포션", "HP를 150 회복한다.", ITP.HP, 150, 600);
- 
-        public static ItemPotion sp1 { get; } = new ItemPotion("맑은 물", "SP를 50 회복한다.", ITP.SP, 50, 80);
-        public static ItemPotion sp2 { get; } = new ItemPotion("자양강장제", "SP를 100 회복한다.", ITP.HP, 100, 170);
-        public static ItemPotion sp3 { get; } = new ItemPotion("기력환", "SP를 200 회복한다.", ITP.HP, 200, 350);
+        public List<ItemPotion> potions = new List<ItemPotion>();
+        public List<ItemGear> gears = new List<ItemGear>();
+        public ItemData()
+        {
+            potions.AddRange(new ItemPotion[] { hp1, hp2, hp3, sp1, sp2, sp3, pp });
+            gears.AddRange(new ItemGear[] { sword1, shield1, dagger1, dagger1_d, bow1, arrow1, armorH1, armorL1, glovesL1, shoesL1,
+                                            sword2, shield2, dagger2, dagger2_s, bow2, arrow2, helmetH2, helmetL2, armorH2, armorL2, glovesH2, glovesL2_s, shoesH2_s, shoesL2});
+        }
 
-        public static ItemPotion pp { get; } = new ItemPotion("체질개선 약", "투자한 스텟 포인트를 초기화한다.", ITP.PP, 0, 500);
+
+        public ItemPotion hp1 { get; } = new ItemPotion("작은 체력 포션", "HP를 30 회복한다.", ITP.HP, 30, 100);
+        public ItemPotion hp2 { get; } = new ItemPotion("체력 포션", "HP를 80 회복한다.", ITP.HP, 80, 300);
+        public ItemPotion hp3 { get; } = new ItemPotion("고급 체력 포션", "HP를 150 회복한다.", ITP.HP, 150, 600);
+ 
+        public ItemPotion sp1 { get; } = new ItemPotion("맑은 물", "SP를 50 회복한다.", ITP.SP, 50, 80);
+        public ItemPotion sp2 { get; } = new ItemPotion("자양강장제", "SP를 100 회복한다.", ITP.HP, 100, 170);
+        public ItemPotion sp3 { get; } = new ItemPotion("기력환", "SP를 200 회복한다.", ITP.HP, 200, 350);
+
+        public ItemPotion pp { get; } = new ItemPotion("체질개선 약", "투자한 스텟 포인트를 초기화한다.", ITP.PP, 0, 500);
 
 
 
@@ -670,5 +668,84 @@ namespace TextRPG_SpartaDungeon
     class Mercenary
     {
 
+    }
+
+
+    class GameLoader
+    {
+        public static GameData LoadData(int saveNum)
+        {
+            if (saveNum < 1 || saveNum > 3)
+            {
+                return null;
+            }
+
+            return LoadFromFile($"{Const.saveFileName}{saveNum}");
+        }
+        // JSON 파일에서 데이터를 불러오는 메서드
+        private static GameData LoadFromFile(string filePath)
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    // JSON 파일을 읽어서 객체로 역직렬화
+                    string jsonString = File.ReadAllText(filePath);
+                    GameData playerData = JsonSerializer.Deserialize<GameData>(jsonString);
+                    Console.SetCursorPosition(0, Const.screenH + 10);
+                    Console.WriteLine("데이터가 성공적으로 불러와졌습니다.");
+                    Console.SetCursorPosition(0, 0);
+
+                    //아이템 리스트 가져오기
+                    if (playerData.dic_inventoryPotion != null)
+                    {
+                        foreach (KeyValuePair<string, int> pair in playerData.dic_inventoryPotion)
+                        {
+                            ItemPotion ip = Program.globalItemData.potions.Find(i => i.name == pair.Key);
+                            if (ip != null) playerData.inventoryPotion.Add(new WorldItemPotion(ip, pair.Value));
+                        }
+                    }
+                    if (playerData.dic_inventoryGear != null)
+                    {
+                        foreach (KeyValuePair<string, bool> pair in playerData.dic_inventoryGear)
+                        {
+                            ItemGear ig = Program.globalItemData.gears.Find(i => i.name == pair.Key);
+                            if (ig != null) playerData.inventoryGear.Add(new WorldItemGear(ig, pair.Value));
+                        }
+                    }
+                    if (playerData.dic_equippedGear != null)
+                    {
+                        foreach (KeyValuePair<string, int> pair in playerData.dic_equippedGear)
+                        {
+                            playerData.EquipGear(pair.Key, (GST)pair.Value);
+                        }
+                    }
+                    if (playerData.dic_gearShop != null)
+                    {
+                        foreach (KeyValuePair<string, int> pair in playerData.dic_gearShop)
+                        {
+                            ItemGear ig = Program.globalItemData.gears.Find(i => i.name == pair.Key);
+                            if (ig != null) playerData.gearShop.list.Add(ig);
+                        }
+                    }
+
+                    return playerData;
+                }
+                else
+                {
+                    Console.SetCursorPosition(0, Const.screenH + 10);
+                    Console.WriteLine("파일을 찾을 수 없습니다.");
+                    Console.SetCursorPosition(0, 0);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.SetCursorPosition(0, Const.screenH + 10);
+                Console.WriteLine("데이터 불러오기 중 오류가 발생했습니다: " + ex.Message);
+                Console.SetCursorPosition(0, 0);
+                return null;
+            }
+        }
     }
 }
